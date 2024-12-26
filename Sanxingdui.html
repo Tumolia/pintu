@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sliding Puzzle Game</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f0f0f0;
+    }
+    #controls {
+      margin-bottom: 10px;
+    }
+    #puzzle {
+      display: grid;
+      gap: 2px;
+      background: #333;
+      width: 300px; /* Fixed puzzle area size */
+      height: 300px;
+      position: relative;
+    }
+    .tile {
+      background-size: cover;
+      background-repeat: no-repeat;
+      cursor: pointer;
+      border: 1px solid #fff; /* Add border for easier observation of puzzle pieces */
+    }
+    .empty {
+      background: #333;
+    }
+    button {
+      margin: 0 5px;
+      padding: 5px 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #successMessage {
+      display: none;
+      padding: 10px;
+      background-color: #28a745;
+      color: white;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <button onclick="loadImage(0)">Picture 1</button>
+    <button onclick="loadImage(1)">Picture 2</button>
+    <button onclick="loadImage(2)">Picture 3</button>
+    <button onclick="loadImage(3)">Picture 4</button>
+  </div>
+  <div id="puzzle"></div>
+  <div id="successMessage">Puzzle solved successfully!</div>
+  <script>
+    const ROWS = 3, COLS = 3; // Puzzle rows and columns
+    const puzzle = document.getElementById('puzzle');
+    const successMessage = document.getElementById('successMessage');
+    puzzle.style.gridTemplateRows = `repeat(${ROWS}, 1fr)`;
+    puzzle.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+
+    // Image list
+    const images = [
+      'https://th.bing.com/th/id/OIP.wSXpLR0OrJ3ZtjPq_TO-WwAAAA?w=278&h=185&c=7&r=0&o=5&dpr=2&pid=1.7',
+      'https://th.bing.com/th/id/OIP.nSl_l0B2F4nmEt24Ss5MkQHaEo?w=276&h=180&c=7&r=0&o=5&dpr=2&pid=1.7',
+      'https://th.bing.com/th/id/OIP.CwzF1VgAVS3nK01jgFpf8AHaTA?w=136&h=180&c=7&r=0&o=5&dpr=2&pid=1.7',
+      'https://th.bing.com/th/id/OIP.oa6OWwIGqAMjniwlkbb4KgAAAA?w=251&h=186&c=7&r=0&o=5&dpr=2&pid=1.7'
+    ];
+
+    let tiles = [];
+    let emptyIndex = ROWS * COLS - 1;
+
+    // Load the specified image
+    function loadImage(imageIndex) {
+      tiles = [];
+      puzzle.innerHTML = '';
+      emptyIndex = ROWS * COLS - 1;
+
+      const imageSrc = images[imageIndex];
+
+      // Create puzzle tiles
+      for (let i = 0; i < ROWS * COLS; i++) {
+        const tile = document.createElement('div');
+        tile.classList.add('tile');
+        tile.style.width = `${300 / COLS}px`;
+        tile.style.height = `${300 / ROWS}px`;
+
+        const row = Math.floor(i / COLS);
+        const col = i % COLS;
+
+        // Correct background image slicing
+        const backgroundX = (col * 100) / (COLS - 1);
+        const backgroundY = (row * 100) / (ROWS - 1);
+
+        tile.style.backgroundImage = `url(${imageSrc})`;
+        tile.style.backgroundPosition = `${backgroundX}% ${backgroundY}%`;
+        tile.style.backgroundSize = `${100 * COLS}% ${100 * ROWS}%`;
+
+        // Add drag events to tiles
+        tile.draggable = true;
+        tile.dataset.index = i;
+        tile.addEventListener('dragstart', handleDragStart);
+        tile.addEventListener('dragover', handleDragOver);
+        tile.addEventListener('drop', handleDrop);
+        tile.addEventListener('dragenter', handleDragEnter);
+
+        puzzle.appendChild(tile);
+        tiles.push(tile);
+      }
+
+      // Shuffle the tiles
+      shuffleTiles();
+      render();
+    }
+
+    // Shuffle the puzzle tiles
+    function shuffleTiles() {
+      for (let i = tiles.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tiles[i].dataset.index, tiles[j].dataset.index] = [tiles[j].dataset.index, tiles[i].dataset.index];
+      }
+    }
+
+    // Update the puzzle display
+    function render() {
+      tiles.forEach((tile) => {
+        tile.style.order = tile.dataset.index;
+      });
+    }
+
+    // Drag events
+    function handleDragStart(e) {
+      this.style.opacity = '0.4';
+      draggedTile = this;
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault(); // Allow dropping
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      if (draggedTile !== this && !this.classList.contains('empty')) {
+        // Swap the puzzle pieces
+        [draggedTile.dataset.index, this.dataset.index] = [this.dataset.index, draggedTile.dataset.index];
+        render();
+        // Check if the puzzle is solved
+        checkPuzzleSolved();
+      }
+      draggedTile.style.opacity = '1';
+    }
+
+    function handleDragEnter(e) {
+      e.preventDefault();
+    }
+
+    // Check if the puzzle is solved
+    function checkPuzzleSolved() {
+      let solved = true;
+      for (let i = 0; i < tiles.length; i++) {
+        if (parseInt(tiles[i].dataset.index) !== i) {
+          solved = false;
+          break;
+        }
+      }
+
+      // If puzzle is solved, show success message
+      if (solved) {
+        successMessage.style.display = 'block';
+        setTimeout(() => {
+          successMessage.style.display = 'none';
+        }, 2000); // Hide message after 2 seconds
+      }
+    }
+
+    // Load the first image by default
+    loadImage(0);
+  </script>
+</body>
+</html>
